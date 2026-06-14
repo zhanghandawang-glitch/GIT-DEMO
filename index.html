@@ -1,11 +1,251 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>守望先锋 · 练枪软件 | Overwatch Aim Trainer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    demo
+    <!-- Canvas: 游戏渲染 -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- 菜单画面 -->
+    <div id="menuScreen" class="screen-overlay">
+        <div class="menu-container">
+            <div class="menu-title">
+                <div class="title-hex">⬡</div>
+                <h1>守望先锋 · 练枪软件</h1>
+                <p class="subtitle">OVERWATCH AIM TRAINER</p>
+            </div>
+
+            <div class="mode-cards" id="modeCards">
+                <!-- 移动靶 -->
+                <div class="mode-card" data-mode="tracking">
+                    <div class="card-icon">◎</div>
+                    <h3>移动靶</h3>
+                    <p class="card-en">TRACKING</p>
+                    <p class="card-desc">追踪练习 · 适合跟枪</p>
+                    <p class="card-hero">推荐英雄：士兵76 · 猎空 · 查莉娅</p>
+                    <div class="card-options">
+                        <label>难度 <select class="diff-select" data-mode="tracking">
+                            <option value="easy">简单</option>
+                            <option value="normal" selected>普通</option>
+                            <option value="hard">困难</option>
+                        </select></label>
+                        <label>时长 <select class="duration-select" data-mode="tracking">
+                            <option value="30">30秒</option>
+                            <option value="60" selected>60秒</option>
+                            <option value="120">120秒</option>
+                            <option value="0">无限</option>
+                        </select></label>
+                    </div>
+                    <button class="btn-start" data-mode="tracking">开 始</button>
+                </div>
+
+                <!-- 瞬移靶 -->
+                <div class="mode-card" data-mode="flick">
+                    <div class="card-icon">◉</div>
+                    <h3>瞬移靶</h3>
+                    <p class="card-en">FLICKING</p>
+                    <p class="card-desc">甩枪练习 · 精准定位</p>
+                    <p class="card-hero">推荐英雄：麦克雷 · 黑百合 · 艾什</p>
+                    <div class="card-options">
+                        <label>难度 <select class="diff-select" data-mode="flick">
+                            <option value="easy">简单</option>
+                            <option value="normal" selected>普通</option>
+                            <option value="hard">困难</option>
+                        </select></label>
+                        <label>时长 <select class="duration-select" data-mode="flick">
+                            <option value="30">30秒</option>
+                            <option value="60" selected>60秒</option>
+                            <option value="120">120秒</option>
+                            <option value="0">无限</option>
+                        </select></label>
+                    </div>
+                    <button class="btn-start" data-mode="flick">开 始</button>
+                </div>
+
+                <!-- 结合靶 -->
+                <div class="mode-card" data-mode="combined">
+                    <div class="card-icon">◈</div>
+                    <h3>结合靶</h3>
+                    <p class="card-en">COMBINED</p>
+                    <p class="card-desc">实战模拟 · 综合训练</p>
+                    <p class="card-hero">推荐英雄：所有英雄</p>
+                    <div class="card-options">
+                        <label>难度 <select class="diff-select" data-mode="combined">
+                            <option value="easy">简单</option>
+                            <option value="normal" selected>普通</option>
+                            <option value="hard">困难</option>
+                        </select></label>
+                        <label>时长 <select class="duration-select" data-mode="combined">
+                            <option value="30">30秒</option>
+                            <option value="60" selected>60秒</option>
+                            <option value="120">120秒</option>
+                            <option value="0">无限</option>
+                        </select></label>
+                    </div>
+                    <button class="btn-start" data-mode="combined">开 始</button>
+                </div>
+            </div>
+
+            <div class="menu-stats" id="menuStats">
+                <span class="stat-item">🏆 最佳分数: <strong id="menuBestScore">0</strong></span>
+                <span class="stat-item">🎯 最佳命中率: <strong id="menuBestAcc">0%</strong></span>
+                <span class="stat-item">🕐 总游戏时间: <strong id="menuTotalTime">0分钟</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 倒计时画面 -->
+    <div id="countdownScreen" class="screen-overlay hidden">
+        <div class="countdown-number" id="countdownNumber">3</div>
+        <div class="countdown-label">准备...</div>
+    </div>
+
+    <!-- HUD 覆盖层 -->
+    <div id="hud" class="hidden">
+        <div class="hud-top-left">
+            <div class="hud-mode" id="hudMode">移动靶 · TRACKING</div>
+            <div class="hud-difficulty" id="hudDifficulty">普通</div>
+        </div>
+        <div class="hud-top-center">
+            <div class="hud-score-label">分数</div>
+            <div class="hud-score" id="hudScore">0</div>
+            <div class="hud-combo" id="hudCombo"></div>
+        </div>
+        <div class="hud-top-right">
+            <div class="hud-timer" id="hudTimer">60</div>
+            <div class="hud-accuracy" id="hudAccuracy">命中率: 0%</div>
+        </div>
+        <div class="hud-bottom-left">
+            <div class="hud-preset" id="hudPreset">鼠标速度 1</div>
+        </div>
+        <div class="hud-hint">[ESC] 暂停 | [R] 重新开始 | [1-5] 切换预设</div>
+    </div>
+
+    <!-- 暂停画面 -->
+    <div id="pauseScreen" class="screen-overlay hidden">
+        <div class="pause-card">
+            <h2>⏸ 已暂停</h2>
+            <div class="pause-info">
+                <p>分数: <span id="pauseScore">0</span></p>
+                <p>命中率: <span id="pauseAcc">0%</span></p>
+                <p>剩余时间: <span id="pauseTime">60s</span></p>
+            </div>
+            <button class="btn-primary" id="btnResume">继续游戏</button>
+            <button class="btn-secondary" id="btnQuit">返回菜单</button>
+        </div>
+    </div>
+
+    <!-- 结果画面 -->
+    <div id="resultsScreen" class="screen-overlay hidden">
+        <div class="results-card">
+            <h2>⬡ 训练结束</h2>
+            <div class="results-score" id="resultsFinalScore">0</div>
+            <div class="results-badge hidden" id="resultsNewBest">🏆 新纪录!</div>
+            <div class="results-grid">
+                <div class="result-item">
+                    <div class="result-value" id="resultsAcc">0%</div>
+                    <div class="result-label">命中率</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-value" id="resultsHits">0</div>
+                    <div class="result-label">命中</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-value" id="resultsMisses">0</div>
+                    <div class="result-label">未命中</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-value" id="resultsCombo">0x</div>
+                    <div class="result-label">最大连击</div>
+                </div>
+            </div>
+            <div class="results-buttons">
+                <button class="btn-primary" id="btnPlayAgain">再来一次</button>
+                <button class="btn-secondary" id="btnChangeMode">切换模式</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置面板（右下角） -->
+    <div id="settingsToggle" class="settings-toggle">
+        <span>⚙️</span>
+    </div>
+    <div id="settingsPanel" class="settings-panel hidden">
+        <div class="settings-header">
+            <h3>⚙️ 设置</h3>
+            <button class="btn-close" id="btnCloseSettings">✕</button>
+        </div>
+        <div class="settings-body">
+            <div class="settings-section">
+                <h4>鼠标速度预设</h4>
+                <div id="presetList">
+                    <!-- 由 JS 动态填充 -->
+                </div>
+                <button class="btn-add-preset" id="btnAddPreset">+ 添加预设</button>
+            </div>
+            <div class="settings-divider"></div>
+            <div class="settings-section">
+                <h4>音频</h4>
+                <div class="setting-row">
+                    <span>主音量</span>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="70">
+                    <span id="volumeLabel">70%</span>
+                </div>
+                <div class="setting-row">
+                    <span>背景音乐</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="bgMusicToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="setting-row">
+                    <span>音效</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="sfxToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="settings-divider"></div>
+            <div class="settings-section">
+                <h4>准星设置</h4>
+                <div class="setting-row">
+                    <span>准星颜色</span>
+                    <input type="color" id="crosshairColor" value="#ffffff">
+                </div>
+                <div class="setting-row">
+                    <span>准星大小</span>
+                    <input type="range" id="crosshairSize" min="8" max="24" value="12">
+                </div>
+            </div>
+            <div class="settings-divider"></div>
+            <button class="btn-reset" id="btnResetSettings">恢复默认设置</button>
+        </div>
+    </div>
+
+    <!-- 脚本加载 -->
+    <script src="js/config.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/canvas.js"></script>
+    <script src="js/background.js"></script>
+    <script src="js/targets.js"></script>
+    <script src="js/effects.js"></script>
+    <script src="js/scoring.js"></script>
+    <script src="js/spawner.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/hud.js"></script>
+    <script src="js/settings-panel.js"></script>
+    <script src="js/mode-selector.js"></script>
+    <script src="js/game-loop.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
